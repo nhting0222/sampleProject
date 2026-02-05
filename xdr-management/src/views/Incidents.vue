@@ -70,6 +70,9 @@ const viewDetail = (id) => {
 <style scoped>
 .incidents {
   padding: 2rem;
+  min-height: 100%;
+  width: 100%;
+  background: #f9fafb;
 }
 
 .card {

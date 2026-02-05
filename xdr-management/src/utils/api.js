@@ -11,9 +11,13 @@ const apiClient = axios.create({
   },
 })
 
-// Request interceptor
+// Request interceptor - Add auth token
 apiClient.interceptors.request.use(
   (config) => {
+    const token = localStorage.getItem('xdr_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
     return config
   },
   (error) => {
@@ -21,16 +25,63 @@ apiClient.interceptors.request.use(
   }
 )
 
-// Response interceptor
+// Response interceptor - Handle errors with standardized format
 apiClient.interceptors.response.use(
   (response) => {
     return response
   },
   (error) => {
-    console.error('API Error:', error)
+    // Log error for debugging
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data
+    })
+
+    // Handle 401 Unauthorized
+    if (error.response?.status === 401) {
+      localStorage.removeItem('xdr_token')
+      localStorage.removeItem('xdr_user')
+      // Redirect to login if not already there
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
+    }
+
+    // Handle 403 Forbidden
+    if (error.response?.status === 403) {
+      console.warn('Permission denied:', error.config?.url)
+    }
+
     return Promise.reject(error)
   }
 )
+
+// ========== Auth API ==========
+
+export const authAPI = {
+  login: (username, password) => {
+    const formData = new URLSearchParams()
+    formData.append('username', username)
+    formData.append('password', password)
+    return axios.post(`${API_BASE_URL}/auth/login`, formData, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+  },
+  loginJson: (username, password) => {
+    return axios.post(`${API_BASE_URL}/auth/login/json`, { username, password })
+  },
+  me: () => {
+    return apiClient.get('/auth/me')
+  },
+  refresh: () => {
+    return apiClient.post('/auth/refresh')
+  },
+  register: (userData) => {
+    return apiClient.post('/auth/register', userData)
+  },
+}
 
 // ========== Events API ==========
 

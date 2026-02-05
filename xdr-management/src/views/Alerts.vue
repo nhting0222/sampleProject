@@ -44,6 +44,9 @@ onMounted(async () => {
 <style scoped>
 .alerts {
   padding: 2rem;
+  min-height: 100%;
+  width: 100%;
+  background: #f9fafb;
 }
 
 .card {

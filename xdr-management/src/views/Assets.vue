@@ -60,6 +60,9 @@ const getRiskClass = (score) => {
 <style scoped>
 .assets {
   padding: 2rem;
+  min-height: 100%;
+  width: 100%;
+  background: #f9fafb;
 }
 
 .card {

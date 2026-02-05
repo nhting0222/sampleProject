@@ -414,7 +414,8 @@ onMounted(() => {
 .threat-map {
   padding: 2rem;
   background: #f9fafb;
-  min-height: 100vh;
+  min-height: 100%;
+  width: 100%;
 }
 
 .map-header {

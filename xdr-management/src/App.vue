@@ -1,20 +1,35 @@
 <template>
   <div id="app">
-    <Sidebar />
-    <div class="main-content">
-      <Header />
-      <div class="page-content">
-        <router-view />
+    <!-- Authenticated layout -->
+    <template v-if="authStore.isAuthenticated">
+      <Sidebar />
+      <div class="main-content">
+        <Header />
+        <div class="page-content">
+          <router-view />
+        </div>
       </div>
-    </div>
-    <RealtimeNotifications />
+      <RealtimeNotifications />
+    </template>
+
+    <!-- Unauthenticated layout (Login page) -->
+    <template v-else>
+      <router-view />
+    </template>
+
+    <!-- Toast notifications (always visible) -->
+    <ToastContainer />
   </div>
 </template>
 
 <script setup>
+import { useAuthStore } from './stores/auth'
 import Sidebar from './components/Sidebar.vue'
 import Header from './components/Header.vue'
 import RealtimeNotifications from './components/RealtimeNotifications.vue'
+import ToastContainer from './components/ToastContainer.vue'
+
+const authStore = useAuthStore()
 </script>
 
 <style>
@@ -22,6 +37,12 @@ import RealtimeNotifications from './components/RealtimeNotifications.vue'
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -32,7 +53,9 @@ body {
 
 #app {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
 .main-content {
@@ -40,11 +63,16 @@ body {
   margin-left: 260px;
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .page-content {
   flex: 1;
   background: #f3f4f6;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: calc(100vh - 70px);
 }
 
 ::-webkit-scrollbar {
@@ -72,6 +100,7 @@ body {
 
   .page-content {
     padding-top: 60px;
+    height: calc(100vh - 130px);
   }
 }
 </style>
