@@ -3,7 +3,7 @@
     <div class="map-header">
       <div class="header-left">
         <h1>🗺️ Geographic Threat Map</h1>
-        <p class="subtitle">Real-time security threat distribution across locations</p>
+        <p class="subtitle">Real-time security threat distribution across South Korea</p>
       </div>
       <div class="header-right">
         <div class="filter-group">
@@ -55,7 +55,7 @@
 
     <!-- Main Map Visualization -->
     <div class="map-container">
-      <div class="map-chart">
+      <div class="map-chart" ref="mapChartRef">
         <v-chart :option="mapOption" autoresize @click="handleLocationClick" />
       </div>
     </div>
@@ -111,10 +111,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import VChart from 'vue-echarts'
-import { use } from 'echarts/core'
+import { use, registerMap } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { ScatterChart, EffectScatterChart } from 'echarts/charts'
-import { TooltipComponent, GridComponent } from 'echarts/components'
+import { MapChart, ScatterChart, EffectScatterChart, LinesChart } from 'echarts/charts'
+import { TooltipComponent, GeoComponent, VisualMapComponent } from 'echarts/components'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
@@ -122,121 +122,168 @@ dayjs.extend(relativeTime)
 
 use([
   CanvasRenderer,
+  MapChart,
   ScatterChart,
   EffectScatterChart,
+  LinesChart,
   TooltipComponent,
-  GridComponent
+  GeoComponent,
+  VisualMapComponent
 ])
+
+// South Korea GeoJSON (simplified)
+const koreaGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "South Korea" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [126.0, 38.5], [126.5, 38.3], [127.0, 38.4], [127.5, 38.3],
+          [128.0, 38.5], [128.5, 38.3], [129.0, 38.0], [129.3, 37.5],
+          [129.5, 37.0], [129.4, 36.5], [129.5, 36.0], [129.4, 35.5],
+          [129.2, 35.2], [129.0, 35.1], [128.5, 35.0], [128.0, 35.0],
+          [127.5, 34.8], [127.0, 34.6], [126.5, 34.5], [126.3, 34.7],
+          [126.1, 35.0], [126.0, 35.5], [125.8, 36.0], [126.0, 36.5],
+          [126.2, 37.0], [126.5, 37.5], [126.3, 37.8], [126.0, 38.0],
+          [126.0, 38.5]
+        ]]
+      }
+    }
+  ]
+}
+
+// Register South Korea map
+registerMap('SouthKorea', koreaGeoJson)
 
 const router = useRouter()
 const timeRange = ref('24h')
 const threatFilter = ref('all')
+const mapChartRef = ref(null)
 
-// Location data with detailed information
+// Location data with actual Korean city coordinates (longitude, latitude)
 const locations = ref([
   {
     name: 'Seoul HQ',
-    x: 50,
-    y: 75,
+    coord: [126.9780, 37.5665], // Seoul
     events: 234,
     threats: 89,
     activeThreats: 12,
     incidents: 8,
     assets: 156,
     lastUpdate: new Date(),
-    region: 'Central',
+    region: 'Seoul',
     ip: '10.0.1.0/24'
   },
   {
     name: 'Busan Office',
-    x: 60,
-    y: 40,
+    coord: [129.0756, 35.1796], // Busan
     events: 156,
     threats: 67,
     activeThreats: 8,
     incidents: 5,
     assets: 98,
     lastUpdate: new Date(Date.now() - 5 * 60000),
-    region: 'South',
+    region: 'Busan',
     ip: '10.0.2.0/24'
   },
   {
     name: 'Incheon DC',
-    x: 45,
-    y: 72,
+    coord: [126.7052, 37.4563], // Incheon
     events: 145,
     threats: 54,
     activeThreats: 6,
     incidents: 4,
     assets: 87,
     lastUpdate: new Date(Date.now() - 2 * 60000),
-    region: 'West',
+    region: 'Incheon',
     ip: '10.0.3.0/24'
   },
   {
     name: 'Daegu Branch',
-    x: 55,
-    y: 50,
+    coord: [128.6014, 35.8714], // Daegu
     events: 98,
     threats: 43,
     activeThreats: 4,
     incidents: 3,
     assets: 67,
     lastUpdate: new Date(Date.now() - 8 * 60000),
-    region: 'Southeast',
+    region: 'Daegu',
     ip: '10.0.4.0/24'
   },
   {
     name: 'Daejeon R&D',
-    x: 48,
-    y: 60,
+    coord: [127.3845, 36.3504], // Daejeon
     events: 87,
     threats: 32,
     activeThreats: 3,
     incidents: 2,
     assets: 54,
     lastUpdate: new Date(Date.now() - 3 * 60000),
-    region: 'Central',
+    region: 'Daejeon',
     ip: '10.0.5.0/24'
   },
   {
     name: 'Gwangju Office',
-    x: 42,
-    y: 50,
+    coord: [126.8526, 35.1595], // Gwangju
     events: 76,
     threats: 28,
     activeThreats: 2,
     incidents: 2,
     assets: 45,
     lastUpdate: new Date(Date.now() - 10 * 60000),
-    region: 'Southwest',
+    region: 'Gwangju',
     ip: '10.0.6.0/24'
   },
   {
     name: 'Ulsan Plant',
-    x: 62,
-    y: 45,
+    coord: [129.3114, 35.5384], // Ulsan
     events: 65,
     threats: 25,
     activeThreats: 2,
     incidents: 1,
     assets: 34,
     lastUpdate: new Date(Date.now() - 6 * 60000),
-    region: 'Southeast',
+    region: 'Ulsan',
     ip: '10.0.7.0/24'
   },
   {
     name: 'Suwon Branch',
-    x: 50,
-    y: 72,
+    coord: [127.0286, 37.2636], // Suwon
     events: 54,
     threats: 18,
     activeThreats: 1,
     incidents: 1,
     assets: 28,
     lastUpdate: new Date(Date.now() - 4 * 60000),
-    region: 'Central',
+    region: 'Suwon',
     ip: '10.0.8.0/24'
+  },
+  {
+    name: 'Jeju Office',
+    coord: [126.5312, 33.4996], // Jeju
+    events: 42,
+    threats: 15,
+    activeThreats: 1,
+    incidents: 0,
+    assets: 22,
+    lastUpdate: new Date(Date.now() - 12 * 60000),
+    region: 'Jeju',
+    ip: '10.0.9.0/24'
+  },
+  {
+    name: 'Changwon Factory',
+    coord: [128.6811, 35.2280], // Changwon
+    events: 38,
+    threats: 12,
+    activeThreats: 1,
+    incidents: 0,
+    assets: 18,
+    lastUpdate: new Date(Date.now() - 15 * 60000),
+    region: 'Changwon',
+    ip: '10.0.10.0/24'
   }
 ])
 
@@ -268,32 +315,37 @@ const getThreatColor = (threats) => {
 }
 
 const mapOption = computed(() => ({
-  backgroundColor: '#f9fafb',
+  backgroundColor: '#f0f4f8',
   tooltip: {
     trigger: 'item',
     formatter: (params) => {
-      if (!params.data) return ''
-      const data = params.data
+      if (!params.data || !params.data.name) return ''
+      const loc = locations.value.find(l => l.name === params.data.name)
+      if (!loc) return params.data.name
       return `<div style="padding: 12px; min-width: 200px;">
         <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #1f2937;">
-          ${data.name}
+          📍 ${loc.name}
         </div>
         <div style="display: grid; gap: 4px;">
           <div style="display: flex; justify-content: space-between;">
             <span style="color: #6b7280;">Events:</span>
-            <strong style="color: #1f2937;">${data.events}</strong>
+            <strong style="color: #1f2937;">${loc.events}</strong>
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span style="color: #6b7280;">Threats:</span>
-            <strong style="color: ${getThreatColor(data.threats)};">${data.threats}</strong>
+            <strong style="color: ${getThreatColor(loc.threats)};">${loc.threats}</strong>
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span style="color: #6b7280;">Active:</span>
-            <strong style="color: #ef4444;">${data.activeThreats}</strong>
+            <strong style="color: #ef4444;">${loc.activeThreats}</strong>
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span style="color: #6b7280;">Incidents:</span>
-            <strong style="color: #1f2937;">${data.incidents}</strong>
+            <strong style="color: #1f2937;">${loc.incidents}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #6b7280;">Assets:</span>
+            <strong style="color: #1f2937;">${loc.assets}</strong>
           </div>
         </div>
       </div>`
@@ -303,80 +355,125 @@ const mapOption = computed(() => ({
     borderWidth: 1,
     textStyle: { color: '#1f2937' }
   },
-  xAxis: {
-    type: 'value',
-    show: false
-  },
-  yAxis: {
-    type: 'value',
-    show: false
+  geo: {
+    map: 'SouthKorea',
+    roam: true,
+    zoom: 1.2,
+    center: [127.5, 36.0],
+    scaleLimit: {
+      min: 0.8,
+      max: 5
+    },
+    itemStyle: {
+      areaColor: '#e8f4f8',
+      borderColor: '#91d5ff',
+      borderWidth: 2,
+      shadowColor: 'rgba(0, 0, 0, 0.1)',
+      shadowBlur: 10
+    },
+    emphasis: {
+      itemStyle: {
+        areaColor: '#bae7ff',
+        borderColor: '#69c0ff',
+        borderWidth: 3
+      }
+    },
+    label: {
+      show: false
+    }
   },
   series: [
+    // Background scatter (all locations)
     {
+      name: 'Locations',
       type: 'scatter',
-      symbolSize: (data) => {
-        if (!data || !data[2]) return 30
-        return Math.max(data[2] / 2.5, 30)
+      coordinateSystem: 'geo',
+      symbolSize: (val) => {
+        const size = val[2] / 3
+        return Math.max(size, 20)
       },
       data: filteredLocations.value.map(loc => ({
         name: loc.name,
-        value: [loc.x, loc.y, loc.events],
-        events: loc.events,
-        threats: loc.threats,
-        activeThreats: loc.activeThreats,
-        incidents: loc.incidents,
+        value: [...loc.coord, loc.events],
         itemStyle: {
           color: getThreatColor(loc.threats),
-          shadowBlur: 20,
-          shadowColor: getThreatColor(loc.threats),
           borderColor: '#fff',
-          borderWidth: 4
+          borderWidth: 3,
+          shadowColor: getThreatColor(loc.threats),
+          shadowBlur: 15
         }
       })),
       label: {
         show: true,
-        formatter: '{b}',
         position: 'top',
-        fontSize: 12,
+        formatter: '{b}',
+        fontSize: 11,
         fontWeight: 'bold',
         color: '#1f2937',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        padding: [6, 10],
-        borderRadius: 6,
-        borderColor: '#e5e7eb',
-        borderWidth: 1
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        padding: [4, 8],
+        borderRadius: 4,
+        distance: 10
       },
       emphasis: {
-        scale: 1.4,
-        label: {
-          show: true,
-          fontSize: 14
-        }
-      }
-    },
-    {
-      type: 'effectScatter',
-      symbolSize: (data) => {
-        if (!data || !data[2]) return 30
-        return Math.max(data[2] / 2.5, 30)
+        scale: 1.5
       },
-      data: filteredLocations.value.filter(loc => loc.threats >= 50).map(loc => ({
-        name: loc.name,
-        value: [loc.x, loc.y, loc.events],
-        events: loc.events,
-        threats: loc.threats
-      })),
+      zlevel: 2
+    },
+    // Ripple effect for high threat locations
+    {
+      name: 'High Threat Alert',
+      type: 'effectScatter',
+      coordinateSystem: 'geo',
+      symbolSize: (val) => {
+        const size = val[2] / 3
+        return Math.max(size, 25)
+      },
+      data: filteredLocations.value
+        .filter(loc => loc.threats >= 50)
+        .map(loc => ({
+          name: loc.name,
+          value: [...loc.coord, loc.events],
+          itemStyle: {
+            color: getThreatColor(loc.threats)
+          }
+        })),
       showEffectOn: 'render',
       rippleEffect: {
         brushType: 'stroke',
-        scale: 3.5,
-        period: 2.5
+        scale: 4,
+        period: 3
       },
-      itemStyle: {
-        color: getThreatColor(80),
-        shadowBlur: 25,
-        shadowColor: 'rgba(239, 68, 68, 0.8)'
-      }
+      zlevel: 1
+    },
+    // Connection lines from Seoul (HQ) to other locations
+    {
+      name: 'Connections',
+      type: 'lines',
+      coordinateSystem: 'geo',
+      zlevel: 0,
+      effect: {
+        show: true,
+        period: 4,
+        trailLength: 0.3,
+        symbol: 'arrow',
+        symbolSize: 6,
+        color: '#3b82f6'
+      },
+      lineStyle: {
+        color: '#93c5fd',
+        width: 1,
+        curveness: 0.3,
+        opacity: 0.6
+      },
+      data: filteredLocations.value
+        .filter(loc => loc.name !== 'Seoul HQ')
+        .map(loc => ({
+          coords: [
+            [126.9780, 37.5665], // Seoul
+            loc.coord
+          ]
+        }))
     }
   ]
 }))
@@ -386,7 +483,7 @@ const formatTime = (timestamp) => {
 }
 
 const handleLocationClick = (params) => {
-  if (params.data) {
+  if (params.data && params.data.name) {
     const location = locations.value.find(l => l.name === params.data.name)
     if (location) {
       selectLocation(location)
@@ -396,17 +493,14 @@ const handleLocationClick = (params) => {
 
 const selectLocation = (location) => {
   console.log('Selected location:', location)
-  // Could open a modal or navigate to details
 }
 
 const viewDetails = (location) => {
-  // Navigate to a detailed view or show modal
   console.log('View details for:', location)
 }
 
 onMounted(() => {
-  // Could fetch real-time data here
-  console.log('Threat Map loaded')
+  console.log('Threat Map loaded with South Korea map')
 })
 </script>
 
