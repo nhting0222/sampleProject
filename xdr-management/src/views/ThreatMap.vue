@@ -2,7 +2,7 @@
   <div class="threat-map">
     <div class="map-header">
       <div class="header-left">
-        <h1>🗺️ Geographic Threat Map</h1>
+        <h1>3D Geographic Threat Map</h1>
         <p class="subtitle">Real-time security threat distribution across South Korea</p>
       </div>
       <div class="header-right">
@@ -21,6 +21,13 @@
             <option value="all">All Levels</option>
             <option value="critical">Critical Only</option>
             <option value="high">High & Above</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>View Mode:</label>
+          <select v-model="viewMode" class="filter-select">
+            <option value="3d">3D Map</option>
+            <option value="globe">Globe View</option>
           </select>
         </div>
       </div>
@@ -51,9 +58,12 @@
           <span class="legend-count">{{ lowCount }}</span>
         </div>
       </div>
+      <div class="view-controls">
+        <span class="control-hint">Drag to rotate | Scroll to zoom | Right-click to pan</span>
+      </div>
     </div>
 
-    <!-- Main Map Visualization -->
+    <!-- Main 3D Map Visualization -->
     <div class="map-container">
       <div class="map-chart" ref="mapChartRef">
         <v-chart :option="mapOption" autoresize @click="handleLocationClick" />
@@ -71,7 +81,7 @@
       >
         <div class="card-header">
           <div class="location-name">
-            <span class="location-icon">📍</span>
+            <span class="location-icon">{{ getLocationIcon(location) }}</span>
             {{ location.name }}
           </div>
           <div class="threat-badge" :class="getThreatLevel(location.threats)">
@@ -99,7 +109,7 @@
         <div class="card-footer">
           <span class="last-update">Updated {{ formatTime(location.lastUpdate) }}</span>
           <button class="details-btn" @click.stop="viewDetails(location)">
-            View Details →
+            View Details
           </button>
         </div>
       </div>
@@ -111,63 +121,90 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import VChart from 'vue-echarts'
-import { use, registerMap } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { MapChart, ScatterChart, EffectScatterChart, LinesChart } from 'echarts/charts'
-import { TooltipComponent, GeoComponent, VisualMapComponent } from 'echarts/components'
+import * as echarts from 'echarts'
+import 'echarts-gl'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
 dayjs.extend(relativeTime)
 
-use([
-  CanvasRenderer,
-  MapChart,
-  ScatterChart,
-  EffectScatterChart,
-  LinesChart,
-  TooltipComponent,
-  GeoComponent,
-  VisualMapComponent
-])
-
-// South Korea GeoJSON (simplified)
+// South Korea GeoJSON with provinces
 const koreaGeoJson = {
   "type": "FeatureCollection",
   "features": [
     {
       "type": "Feature",
-      "properties": { "name": "South Korea" },
+      "properties": { "name": "Seoul" },
       "geometry": {
         "type": "Polygon",
-        "coordinates": [[
-          [126.0, 38.5], [126.5, 38.3], [127.0, 38.4], [127.5, 38.3],
-          [128.0, 38.5], [128.5, 38.3], [129.0, 38.0], [129.3, 37.5],
-          [129.5, 37.0], [129.4, 36.5], [129.5, 36.0], [129.4, 35.5],
-          [129.2, 35.2], [129.0, 35.1], [128.5, 35.0], [128.0, 35.0],
-          [127.5, 34.8], [127.0, 34.6], [126.5, 34.5], [126.3, 34.7],
-          [126.1, 35.0], [126.0, 35.5], [125.8, 36.0], [126.0, 36.5],
-          [126.2, 37.0], [126.5, 37.5], [126.3, 37.8], [126.0, 38.0],
-          [126.0, 38.5]
-        ]]
+        "coordinates": [[[126.8, 37.7], [127.2, 37.7], [127.2, 37.4], [126.8, 37.4], [126.8, 37.7]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Gyeonggi" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[126.3, 38.0], [127.8, 38.0], [127.8, 36.9], [126.3, 36.9], [126.3, 38.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Gangwon" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[127.5, 38.5], [129.3, 38.5], [129.3, 37.0], [127.5, 37.0], [127.5, 38.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Chungcheong" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[126.0, 37.0], [128.0, 37.0], [128.0, 35.9], [126.0, 35.9], [126.0, 37.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Jeolla" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[126.0, 36.0], [127.8, 36.0], [127.8, 34.3], [126.0, 34.3], [126.0, 36.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Gyeongsang" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[127.8, 37.0], [129.6, 37.0], [129.6, 34.8], [127.8, 34.8], [127.8, 37.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Jeju" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[126.1, 33.6], [126.9, 33.6], [126.9, 33.2], [126.1, 33.2], [126.1, 33.6]]]
       }
     }
   ]
 }
 
 // Register South Korea map
-registerMap('SouthKorea', koreaGeoJson)
+echarts.registerMap('SouthKorea', koreaGeoJson)
 
 const router = useRouter()
 const timeRange = ref('24h')
 const threatFilter = ref('all')
+const viewMode = ref('3d')
 const mapChartRef = ref(null)
 
 // Location data with actual Korean city coordinates (longitude, latitude)
 const locations = ref([
   {
     name: 'Seoul HQ',
-    coord: [126.9780, 37.5665], // Seoul
+    coord: [126.9780, 37.5665],
     events: 234,
     threats: 89,
     activeThreats: 12,
@@ -179,7 +216,7 @@ const locations = ref([
   },
   {
     name: 'Busan Office',
-    coord: [129.0756, 35.1796], // Busan
+    coord: [129.0756, 35.1796],
     events: 156,
     threats: 67,
     activeThreats: 8,
@@ -191,7 +228,7 @@ const locations = ref([
   },
   {
     name: 'Incheon DC',
-    coord: [126.7052, 37.4563], // Incheon
+    coord: [126.7052, 37.4563],
     events: 145,
     threats: 54,
     activeThreats: 6,
@@ -203,7 +240,7 @@ const locations = ref([
   },
   {
     name: 'Daegu Branch',
-    coord: [128.6014, 35.8714], // Daegu
+    coord: [128.6014, 35.8714],
     events: 98,
     threats: 43,
     activeThreats: 4,
@@ -215,7 +252,7 @@ const locations = ref([
   },
   {
     name: 'Daejeon R&D',
-    coord: [127.3845, 36.3504], // Daejeon
+    coord: [127.3845, 36.3504],
     events: 87,
     threats: 32,
     activeThreats: 3,
@@ -227,7 +264,7 @@ const locations = ref([
   },
   {
     name: 'Gwangju Office',
-    coord: [126.8526, 35.1595], // Gwangju
+    coord: [126.8526, 35.1595],
     events: 76,
     threats: 28,
     activeThreats: 2,
@@ -239,7 +276,7 @@ const locations = ref([
   },
   {
     name: 'Ulsan Plant',
-    coord: [129.3114, 35.5384], // Ulsan
+    coord: [129.3114, 35.5384],
     events: 65,
     threats: 25,
     activeThreats: 2,
@@ -251,7 +288,7 @@ const locations = ref([
   },
   {
     name: 'Suwon Branch',
-    coord: [127.0286, 37.2636], // Suwon
+    coord: [127.0286, 37.2636],
     events: 54,
     threats: 18,
     activeThreats: 1,
@@ -263,7 +300,7 @@ const locations = ref([
   },
   {
     name: 'Jeju Office',
-    coord: [126.5312, 33.4996], // Jeju
+    coord: [126.5312, 33.4996],
     events: 42,
     threats: 15,
     activeThreats: 1,
@@ -275,7 +312,7 @@ const locations = ref([
   },
   {
     name: 'Changwon Factory',
-    coord: [128.6811, 35.2280], // Changwon
+    coord: [128.6811, 35.2280],
     events: 38,
     threats: 12,
     activeThreats: 1,
@@ -314,68 +351,113 @@ const getThreatColor = (threats) => {
   return '#10b981'
 }
 
-const mapOption = computed(() => ({
-  backgroundColor: '#f0f4f8',
+const getLocationIcon = (location) => {
+  const level = getThreatLevel(location.threats)
+  if (level === 'critical') return '🔴'
+  if (level === 'high') return '🟠'
+  if (level === 'medium') return '🔵'
+  return '🟢'
+}
+
+// 3D Map Option
+const map3DOption = computed(() => ({
+  backgroundColor: '#0a1628',
   tooltip: {
-    trigger: 'item',
+    show: true,
     formatter: (params) => {
       if (!params.data || !params.data.name) return ''
       const loc = locations.value.find(l => l.name === params.data.name)
       if (!loc) return params.data.name
-      return `<div style="padding: 12px; min-width: 200px;">
-        <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #1f2937;">
-          📍 ${loc.name}
+      return `<div style="padding: 12px; min-width: 200px; background: rgba(10, 22, 40, 0.95); border-radius: 8px;">
+        <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #fff;">
+          ${getLocationIcon(loc)} ${loc.name}
         </div>
         <div style="display: grid; gap: 4px;">
           <div style="display: flex; justify-content: space-between;">
-            <span style="color: #6b7280;">Events:</span>
-            <strong style="color: #1f2937;">${loc.events}</strong>
+            <span style="color: #94a3b8;">Events:</span>
+            <strong style="color: #fff;">${loc.events}</strong>
           </div>
           <div style="display: flex; justify-content: space-between;">
-            <span style="color: #6b7280;">Threats:</span>
+            <span style="color: #94a3b8;">Threats:</span>
             <strong style="color: ${getThreatColor(loc.threats)};">${loc.threats}</strong>
           </div>
           <div style="display: flex; justify-content: space-between;">
-            <span style="color: #6b7280;">Active:</span>
+            <span style="color: #94a3b8;">Active:</span>
             <strong style="color: #ef4444;">${loc.activeThreats}</strong>
           </div>
           <div style="display: flex; justify-content: space-between;">
-            <span style="color: #6b7280;">Incidents:</span>
-            <strong style="color: #1f2937;">${loc.incidents}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: #6b7280;">Assets:</span>
-            <strong style="color: #1f2937;">${loc.assets}</strong>
+            <span style="color: #94a3b8;">Incidents:</span>
+            <strong style="color: #fff;">${loc.incidents}</strong>
           </div>
         </div>
       </div>`
     },
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    borderColor: '#e5e7eb',
-    borderWidth: 1,
-    textStyle: { color: '#1f2937' }
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    textStyle: { color: '#fff' }
   },
-  geo: {
+  geo3D: {
     map: 'SouthKorea',
     roam: true,
-    zoom: 1.2,
-    center: [127.5, 36.0],
-    scaleLimit: {
-      min: 0.8,
-      max: 5
+    regionHeight: 2,
+    viewControl: {
+      autoRotate: false,
+      autoRotateSpeed: 5,
+      distance: 100,
+      alpha: 40,
+      beta: 0,
+      minAlpha: 5,
+      maxAlpha: 90,
+      minBeta: -360,
+      maxBeta: 360,
+      animation: true,
+      animationDurationUpdate: 1000,
+      animationEasingUpdate: 'cubicInOut'
+    },
+    shading: 'realistic',
+    realisticMaterial: {
+      roughness: 0.6,
+      metalness: 0.1
+    },
+    postEffect: {
+      enable: true,
+      bloom: {
+        enable: true,
+        intensity: 0.1
+      },
+      SSAO: {
+        enable: true,
+        radius: 2,
+        intensity: 1
+      }
+    },
+    light: {
+      main: {
+        intensity: 1.2,
+        shadow: true,
+        shadowQuality: 'high',
+        alpha: 55,
+        beta: 10
+      },
+      ambient: {
+        intensity: 0.3
+      }
+    },
+    groundPlane: {
+      show: true,
+      color: '#0a1628'
     },
     itemStyle: {
-      areaColor: '#e8f4f8',
-      borderColor: '#91d5ff',
-      borderWidth: 2,
-      shadowColor: 'rgba(0, 0, 0, 0.1)',
-      shadowBlur: 10
+      color: '#1e3a5f',
+      borderWidth: 1,
+      borderColor: '#3b82f6'
     },
     emphasis: {
       itemStyle: {
-        areaColor: '#bae7ff',
-        borderColor: '#69c0ff',
-        borderWidth: 3
+        color: '#2563eb'
+      },
+      label: {
+        show: false
       }
     },
     label: {
@@ -383,100 +465,235 @@ const mapOption = computed(() => ({
     }
   },
   series: [
-    // Background scatter (all locations)
+    // 3D Bar for threat levels at each location
+    {
+      name: 'Threat Bars',
+      type: 'bar3D',
+      coordinateSystem: 'geo3D',
+      barSize: 0.8,
+      shading: 'realistic',
+      minHeight: 0.5,
+      silent: false,
+      data: filteredLocations.value.map(loc => ({
+        name: loc.name,
+        value: [loc.coord[0], loc.coord[1], loc.threats / 5],
+        itemStyle: {
+          color: getThreatColor(loc.threats),
+          opacity: 0.9
+        },
+        emphasis: {
+          itemStyle: {
+            color: '#fff'
+          }
+        }
+      })),
+      label: {
+        show: true,
+        position: 'top',
+        formatter: (params) => params.data.name,
+        textStyle: {
+          color: '#fff',
+          fontSize: 11,
+          fontWeight: 'bold',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          padding: [4, 8],
+          borderRadius: 4
+        }
+      }
+    },
+    // Scatter3D for location points
     {
       name: 'Locations',
-      type: 'scatter',
-      coordinateSystem: 'geo',
+      type: 'scatter3D',
+      coordinateSystem: 'geo3D',
       symbolSize: (val) => {
-        const size = val[2] / 3
-        return Math.max(size, 20)
+        const size = val[2] * 0.3
+        return Math.max(size, 12)
       },
       data: filteredLocations.value.map(loc => ({
         name: loc.name,
-        value: [...loc.coord, loc.events],
+        value: [loc.coord[0], loc.coord[1], loc.threats / 5 + 1],
         itemStyle: {
           color: getThreatColor(loc.threats),
           borderColor: '#fff',
-          borderWidth: 3,
-          shadowColor: getThreatColor(loc.threats),
-          shadowBlur: 15
+          borderWidth: 2
+        }
+      })),
+      label: {
+        show: false
+      }
+    },
+    // Lines3D for connections from Seoul HQ
+    {
+      name: 'Connections',
+      type: 'lines3D',
+      coordinateSystem: 'geo3D',
+      effect: {
+        show: true,
+        period: 3,
+        trailLength: 0.2,
+        trailWidth: 3,
+        trailOpacity: 0.6,
+        trailColor: '#60a5fa'
+      },
+      lineStyle: {
+        color: '#3b82f6',
+        width: 1,
+        opacity: 0.4
+      },
+      blendMode: 'lighter',
+      data: filteredLocations.value
+        .filter(loc => loc.name !== 'Seoul HQ')
+        .map(loc => {
+          const seoulLoc = locations.value.find(l => l.name === 'Seoul HQ')
+          return {
+            coords: [
+              [seoulLoc.coord[0], seoulLoc.coord[1], seoulLoc.threats / 5 + 1],
+              [loc.coord[0], loc.coord[1], loc.threats / 5 + 1]
+            ]
+          }
+        })
+    }
+  ]
+}))
+
+// Globe view option
+const globeOption = computed(() => ({
+  backgroundColor: '#0a1628',
+  tooltip: {
+    show: true,
+    formatter: (params) => {
+      if (!params.data || !params.data.name) return ''
+      const loc = locations.value.find(l => l.name === params.data.name)
+      if (!loc) return params.data.name
+      return `<div style="padding: 12px; min-width: 200px;">
+        <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #fff;">
+          ${getLocationIcon(loc)} ${loc.name}
+        </div>
+        <div style="display: grid; gap: 4px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #94a3b8;">Threats:</span>
+            <strong style="color: ${getThreatColor(loc.threats)};">${loc.threats}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #94a3b8;">Active:</span>
+            <strong style="color: #ef4444;">${loc.activeThreats}</strong>
+          </div>
+        </div>
+      </div>`
+    },
+    backgroundColor: 'rgba(10, 22, 40, 0.95)',
+    borderWidth: 0,
+    textStyle: { color: '#fff' }
+  },
+  globe: {
+    baseColor: '#1e3a5f',
+    heightTexture: null,
+    displacementScale: 0,
+    shading: 'realistic',
+    realisticMaterial: {
+      roughness: 0.8,
+      metalness: 0.1
+    },
+    postEffect: {
+      enable: true,
+      bloom: {
+        enable: true,
+        intensity: 0.05
+      }
+    },
+    light: {
+      main: {
+        intensity: 1.5,
+        shadow: true
+      },
+      ambient: {
+        intensity: 0.3
+      }
+    },
+    viewControl: {
+      autoRotate: true,
+      autoRotateSpeed: 3,
+      targetCoord: [127.5, 36.0],
+      distance: 50,
+      alpha: 30,
+      beta: 160,
+      minDistance: 20,
+      maxDistance: 200
+    },
+    layers: [
+      {
+        type: 'blend',
+        blendTo: 'emission',
+        texture: null
+      }
+    ]
+  },
+  series: [
+    {
+      name: 'Locations',
+      type: 'scatter3D',
+      coordinateSystem: 'globe',
+      symbolSize: (val) => {
+        return Math.max(val[2] * 0.2, 10)
+      },
+      data: filteredLocations.value.map(loc => ({
+        name: loc.name,
+        value: [loc.coord[0], loc.coord[1], loc.threats],
+        itemStyle: {
+          color: getThreatColor(loc.threats),
+          borderColor: '#fff',
+          borderWidth: 1
         }
       })),
       label: {
         show: true,
         position: 'top',
         formatter: '{b}',
-        fontSize: 11,
-        fontWeight: 'bold',
-        color: '#1f2937',
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        padding: [4, 8],
-        borderRadius: 4,
-        distance: 10
-      },
-      emphasis: {
-        scale: 1.5
-      },
-      zlevel: 2
+        textStyle: {
+          color: '#fff',
+          fontSize: 10,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: [2, 4],
+          borderRadius: 2
+        }
+      }
     },
-    // Ripple effect for high threat locations
-    {
-      name: 'High Threat Alert',
-      type: 'effectScatter',
-      coordinateSystem: 'geo',
-      symbolSize: (val) => {
-        const size = val[2] / 3
-        return Math.max(size, 25)
-      },
-      data: filteredLocations.value
-        .filter(loc => loc.threats >= 50)
-        .map(loc => ({
-          name: loc.name,
-          value: [...loc.coord, loc.events],
-          itemStyle: {
-            color: getThreatColor(loc.threats)
-          }
-        })),
-      showEffectOn: 'render',
-      rippleEffect: {
-        brushType: 'stroke',
-        scale: 4,
-        period: 3
-      },
-      zlevel: 1
-    },
-    // Connection lines from Seoul (HQ) to other locations
     {
       name: 'Connections',
-      type: 'lines',
-      coordinateSystem: 'geo',
-      zlevel: 0,
+      type: 'lines3D',
+      coordinateSystem: 'globe',
       effect: {
         show: true,
-        period: 4,
-        trailLength: 0.3,
-        symbol: 'arrow',
-        symbolSize: 6,
-        color: '#3b82f6'
+        period: 2,
+        trailLength: 0.15,
+        trailWidth: 2,
+        trailColor: '#60a5fa'
       },
       lineStyle: {
-        color: '#93c5fd',
+        color: '#3b82f6',
         width: 1,
-        curveness: 0.3,
-        opacity: 0.6
+        opacity: 0.3
       },
+      blendMode: 'lighter',
       data: filteredLocations.value
         .filter(loc => loc.name !== 'Seoul HQ')
-        .map(loc => ({
-          coords: [
-            [126.9780, 37.5665], // Seoul
-            loc.coord
-          ]
-        }))
+        .map(loc => {
+          const seoulLoc = locations.value.find(l => l.name === 'Seoul HQ')
+          return {
+            coords: [
+              [seoulLoc.coord[0], seoulLoc.coord[1]],
+              [loc.coord[0], loc.coord[1]]
+            ]
+          }
+        })
     }
   ]
 }))
+
+const mapOption = computed(() => {
+  return viewMode.value === 'globe' ? globeOption.value : map3DOption.value
+})
 
 const formatTime = (timestamp) => {
   return dayjs(timestamp).fromNow()
@@ -500,14 +717,14 @@ const viewDetails = (location) => {
 }
 
 onMounted(() => {
-  console.log('Threat Map loaded with South Korea map')
+  console.log('3D Threat Map loaded')
 })
 </script>
 
 <style scoped>
 .threat-map {
   padding: 2rem;
-  background: #f9fafb;
+  background: linear-gradient(135deg, #0a1628 0%, #1e3a5f 100%);
   min-height: 100%;
   width: 100%;
 }
@@ -523,12 +740,13 @@ onMounted(() => {
 .header-left h1 {
   margin: 0;
   font-size: 2rem;
-  color: #1f2937;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(59, 130, 246, 0.5);
 }
 
 .subtitle {
   margin: 0.5rem 0 0 0;
-  color: #6b7280;
+  color: #94a3b8;
   font-size: 1rem;
 }
 
@@ -547,31 +765,50 @@ onMounted(() => {
 .filter-group label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #6b7280;
+  color: #94a3b8;
 }
 
 .filter-select {
   padding: 0.6rem 1rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #3b82f6;
   border-radius: 8px;
-  background: white;
+  background: rgba(30, 58, 95, 0.8);
+  color: #fff;
   font-size: 0.9rem;
   cursor: pointer;
-  min-width: 180px;
+  min-width: 150px;
+  transition: all 0.3s;
+}
+
+.filter-select:hover {
+  border-color: #60a5fa;
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+.filter-select option {
+  background: #1e3a5f;
+  color: #fff;
 }
 
 .map-legend-section {
-  background: white;
+  background: rgba(30, 58, 95, 0.6);
+  backdrop-filter: blur(10px);
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   margin-bottom: 2rem;
 }
 
 .legend-title {
   font-weight: 700;
   font-size: 1rem;
-  color: #1f2937;
+  color: #fff;
   margin-bottom: 1rem;
 }
 
@@ -579,6 +816,7 @@ onMounted(() => {
   display: flex;
   gap: 2rem;
   flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
 
 .legend-item {
@@ -591,51 +829,65 @@ onMounted(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 3px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 10px currentColor;
 }
 
 .legend-marker.critical {
   background: #ef4444;
+  box-shadow: 0 0 15px #ef4444;
 }
 
 .legend-marker.high {
   background: #f59e0b;
+  box-shadow: 0 0 15px #f59e0b;
 }
 
 .legend-marker.medium {
   background: #3b82f6;
+  box-shadow: 0 0 15px #3b82f6;
 }
 
 .legend-marker.low {
   background: #10b981;
+  box-shadow: 0 0 15px #10b981;
 }
 
 .legend-text {
   font-size: 0.9rem;
-  color: #6b7280;
+  color: #94a3b8;
 }
 
 .legend-count {
   font-weight: 700;
-  color: #1f2937;
-  background: #f3f4f6;
+  color: #fff;
+  background: rgba(59, 130, 246, 0.3);
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
   font-size: 0.85rem;
 }
 
+.view-controls {
+  border-top: 1px solid rgba(59, 130, 246, 0.2);
+  padding-top: 1rem;
+}
+
+.control-hint {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
 .map-container {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: rgba(10, 22, 40, 0.9);
+  border-radius: 16px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
   overflow: hidden;
   margin-bottom: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .map-chart {
   height: 600px;
-  padding: 1rem;
 }
 
 .locations-grid {
@@ -645,9 +897,10 @@ onMounted(() => {
 }
 
 .location-card {
-  background: white;
+  background: rgba(30, 58, 95, 0.6);
+  backdrop-filter: blur(10px);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   border-left: 4px solid;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -655,7 +908,8 @@ onMounted(() => {
 
 .location-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.5);
 }
 
 .location-card.critical {
@@ -679,20 +933,20 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .location-name {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #1f2937;
+  color: #fff;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .location-icon {
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 
 .threat-badge {
@@ -703,23 +957,27 @@ onMounted(() => {
 }
 
 .threat-badge.critical {
-  background: #fee2e2;
-  color: #991b1b;
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid #ef4444;
 }
 
 .threat-badge.high {
-  background: #fef3c7;
-  color: #92400e;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border: 1px solid #f59e0b;
 }
 
 .threat-badge.medium {
-  background: #dbeafe;
-  color: #1e40af;
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border: 1px solid #3b82f6;
 }
 
 .threat-badge.low {
-  background: #d1fae5;
-  color: #065f46;
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border: 1px solid #10b981;
 }
 
 .card-body {
@@ -730,7 +988,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   padding: 0.75rem 0;
-  border-bottom: 1px solid #f9fafb;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
 }
 
 .stat-row:last-child {
@@ -738,17 +996,17 @@ onMounted(() => {
 }
 
 .stat-label {
-  color: #6b7280;
+  color: #94a3b8;
   font-size: 0.9rem;
 }
 
 .stat-value {
   font-weight: 700;
-  color: #1f2937;
+  color: #fff;
 }
 
 .stat-value.threat {
-  color: #ef4444;
+  color: #fca5a5;
 }
 
 .card-footer {
@@ -756,29 +1014,30 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
-  background: #f9fafb;
-  border-top: 1px solid #f3f4f6;
+  background: rgba(10, 22, 40, 0.5);
+  border-top: 1px solid rgba(59, 130, 246, 0.1);
 }
 
 .last-update {
   font-size: 0.85rem;
-  color: #9ca3af;
+  color: #64748b;
 }
 
 .details-btn {
   padding: 0.5rem 1rem;
-  background: #2563eb;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   border: none;
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.3s;
 }
 
 .details-btn:hover {
-  background: #1d4ed8;
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
 }
 
 /* Tablet */
@@ -798,6 +1057,7 @@ onMounted(() => {
 
   .filter-select {
     width: 100%;
+    min-width: auto;
   }
 
   .locations-grid {
@@ -823,44 +1083,20 @@ onMounted(() => {
     width: 100%;
   }
 
-  .filter-group label {
-    font-size: 0.8rem;
-  }
-
-  .filter-select {
-    min-width: auto;
-    font-size: 0.85rem;
-    padding: 0.5rem 0.75rem;
-  }
-
   .map-legend-section {
     padding: 1rem;
-  }
-
-  .legend-title {
-    font-size: 0.9rem;
   }
 
   .legend-items {
     gap: 1rem;
   }
 
-  .legend-item {
-    gap: 0.5rem;
-  }
-
   .legend-text {
     font-size: 0.8rem;
   }
 
-  .legend-count {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.5rem;
-  }
-
   .map-chart {
     height: 400px;
-    padding: 0.5rem;
   }
 
   .locations-grid {
@@ -868,53 +1104,14 @@ onMounted(() => {
     gap: 1rem;
   }
 
-  .location-card {
-    border-radius: 8px;
-  }
-
-  .card-header {
-    padding: 1rem;
-  }
-
-  .location-name {
-    font-size: 1rem;
-  }
-
-  .threat-badge {
-    padding: 0.3rem 0.6rem;
-    font-size: 0.9rem;
-  }
-
-  .card-body {
-    padding: 1rem;
-  }
-
-  .stat-row {
-    padding: 0.6rem 0;
-  }
-
-  .stat-label {
-    font-size: 0.85rem;
-  }
-
-  .stat-number {
-    font-size: 1.3rem;
-  }
-
   .card-footer {
-    padding: 0.75rem 1rem;
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
   }
 
-  .last-update {
-    font-size: 0.8rem;
-  }
-
   .details-btn {
     width: 100%;
-    padding: 0.6rem 1rem;
   }
 }
 </style>
