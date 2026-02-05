@@ -26,8 +26,8 @@
         <div class="filter-group">
           <label>View Mode:</label>
           <select v-model="viewMode" class="filter-select">
-            <option value="3d">3D Map</option>
-            <option value="globe">Globe View</option>
+            <option value="3d">3D Bar View</option>
+            <option value="scatter">3D Scatter View</option>
           </select>
         </div>
       </div>
@@ -66,7 +66,16 @@
     <!-- Main 3D Map Visualization -->
     <div class="map-container">
       <div class="map-chart" ref="mapChartRef">
-        <v-chart :option="mapOption" autoresize @click="handleLocationClick" />
+        <v-chart
+          v-if="chartReady"
+          :key="chartKey"
+          :option="mapOption"
+          autoresize
+          @click="handleLocationClick"
+        />
+        <div v-else class="chart-loading">
+          <span>Loading 3D Map...</span>
+        </div>
       </div>
     </div>
 
@@ -118,7 +127,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import VChart from 'vue-echarts'
 import * as echarts from 'echarts'
@@ -127,6 +136,10 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
 dayjs.extend(relativeTime)
+
+// Chart control
+const chartReady = ref(true)
+const chartKey = ref(0)
 
 // South Korea GeoJSON with provinces
 const koreaGeoJson = {
@@ -199,6 +212,17 @@ const timeRange = ref('24h')
 const threatFilter = ref('all')
 const viewMode = ref('3d')
 const mapChartRef = ref(null)
+
+// Watch viewMode changes and recreate chart
+watch(viewMode, async () => {
+  chartReady.value = false
+  await nextTick()
+  chartKey.value++
+  await nextTick()
+  setTimeout(() => {
+    chartReady.value = true
+  }, 300)
+})
 
 // Location data with actual Korean city coordinates (longitude, latitude)
 const locations = ref([
@@ -557,8 +581,8 @@ const map3DOption = computed(() => ({
   ]
 }))
 
-// Globe view option
-const globeOption = computed(() => ({
+// 3D Scatter view option (alternative view)
+const scatterOption = computed(() => ({
   backgroundColor: '#0a1628',
   tooltip: {
     show: true,
@@ -566,11 +590,15 @@ const globeOption = computed(() => ({
       if (!params.data || !params.data.name) return ''
       const loc = locations.value.find(l => l.name === params.data.name)
       if (!loc) return params.data.name
-      return `<div style="padding: 12px; min-width: 200px;">
+      return `<div style="padding: 12px; min-width: 200px; background: rgba(10, 22, 40, 0.95); border-radius: 8px;">
         <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #fff;">
           ${getLocationIcon(loc)} ${loc.name}
         </div>
         <div style="display: grid; gap: 4px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #94a3b8;">Events:</span>
+            <strong style="color: #fff;">${loc.events}</strong>
+          </div>
           <div style="display: flex; justify-content: space-between;">
             <span style="color: #94a3b8;">Threats:</span>
             <strong style="color: ${getThreatColor(loc.threats)};">${loc.threats}</strong>
@@ -582,98 +610,109 @@ const globeOption = computed(() => ({
         </div>
       </div>`
     },
-    backgroundColor: 'rgba(10, 22, 40, 0.95)',
+    backgroundColor: 'transparent',
     borderWidth: 0,
     textStyle: { color: '#fff' }
   },
-  globe: {
-    baseColor: '#1e3a5f',
-    heightTexture: null,
-    displacementScale: 0,
+  geo3D: {
+    map: 'SouthKorea',
+    roam: true,
+    regionHeight: 1,
+    viewControl: {
+      autoRotate: true,
+      autoRotateSpeed: 3,
+      distance: 120,
+      alpha: 50,
+      beta: 30,
+      animation: true
+    },
     shading: 'realistic',
     realisticMaterial: {
-      roughness: 0.8,
-      metalness: 0.1
+      roughness: 0.7,
+      metalness: 0
     },
     postEffect: {
       enable: true,
       bloom: {
         enable: true,
-        intensity: 0.05
+        intensity: 0.15
       }
     },
     light: {
       main: {
         intensity: 1.5,
-        shadow: true
+        shadow: true,
+        shadowQuality: 'high',
+        alpha: 40,
+        beta: 30
       },
       ambient: {
-        intensity: 0.3
+        intensity: 0.4
       }
     },
-    viewControl: {
-      autoRotate: true,
-      autoRotateSpeed: 3,
-      targetCoord: [127.5, 36.0],
-      distance: 50,
-      alpha: 30,
-      beta: 160,
-      minDistance: 20,
-      maxDistance: 200
+    itemStyle: {
+      color: '#1e3a5f',
+      borderWidth: 1,
+      borderColor: '#60a5fa'
     },
-    layers: [
-      {
-        type: 'blend',
-        blendTo: 'emission',
-        texture: null
+    emphasis: {
+      itemStyle: {
+        color: '#3b82f6'
       }
-    ]
+    }
   },
   series: [
+    // Large scatter points with glow effect
     {
-      name: 'Locations',
+      name: 'Threat Points',
       type: 'scatter3D',
-      coordinateSystem: 'globe',
+      coordinateSystem: 'geo3D',
+      symbol: 'circle',
       symbolSize: (val) => {
-        return Math.max(val[2] * 0.2, 10)
+        return Math.max(val[2] * 0.4, 15)
       },
       data: filteredLocations.value.map(loc => ({
         name: loc.name,
-        value: [loc.coord[0], loc.coord[1], loc.threats],
+        value: [loc.coord[0], loc.coord[1], loc.threats / 3],
         itemStyle: {
           color: getThreatColor(loc.threats),
           borderColor: '#fff',
-          borderWidth: 1
+          borderWidth: 2,
+          opacity: 0.9
         }
       })),
       label: {
         show: true,
         position: 'top',
-        formatter: '{b}',
+        formatter: (params) => `${params.data.name}\n${locations.value.find(l => l.name === params.data.name)?.threats || 0}`,
         textStyle: {
           color: '#fff',
-          fontSize: 10,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          padding: [2, 4],
-          borderRadius: 2
-        }
+          fontSize: 11,
+          fontWeight: 'bold',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          padding: [6, 10],
+          borderRadius: 4
+        },
+        distance: 15
       }
     },
+    // Animated connection lines
     {
       name: 'Connections',
       type: 'lines3D',
-      coordinateSystem: 'globe',
+      coordinateSystem: 'geo3D',
       effect: {
         show: true,
-        period: 2,
-        trailLength: 0.15,
-        trailWidth: 2,
+        period: 2.5,
+        trailLength: 0.3,
+        trailWidth: 4,
+        trailOpacity: 0.8,
         trailColor: '#60a5fa'
       },
       lineStyle: {
         color: '#3b82f6',
-        width: 1,
-        opacity: 0.3
+        width: 2,
+        opacity: 0.5
       },
       blendMode: 'lighter',
       data: filteredLocations.value
@@ -682,8 +721,8 @@ const globeOption = computed(() => ({
           const seoulLoc = locations.value.find(l => l.name === 'Seoul HQ')
           return {
             coords: [
-              [seoulLoc.coord[0], seoulLoc.coord[1]],
-              [loc.coord[0], loc.coord[1]]
+              [seoulLoc.coord[0], seoulLoc.coord[1], seoulLoc.threats / 3],
+              [loc.coord[0], loc.coord[1], loc.threats / 3]
             ]
           }
         })
@@ -692,7 +731,7 @@ const globeOption = computed(() => ({
 }))
 
 const mapOption = computed(() => {
-  return viewMode.value === 'globe' ? globeOption.value : map3DOption.value
+  return viewMode.value === 'scatter' ? scatterOption.value : map3DOption.value
 })
 
 const formatTime = (timestamp) => {
@@ -888,6 +927,15 @@ onMounted(() => {
 
 .map-chart {
   height: 600px;
+}
+
+.chart-loading {
+  height: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 1.2rem;
 }
 
 .locations-grid {
