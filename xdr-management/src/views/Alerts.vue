@@ -143,3 +143,43 @@ input:checked + .slider:before {
   color: #6b7280;
 }
 </style>
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .alerts {
+    padding: 1.5rem;
+  }
+
+  .rules-list {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .alerts {
+    padding: 1rem;
+  }
+
+  .card {
+    padding: 1.5rem;
+  }
+
+  .rule-card {
+    padding: 1rem;
+  }
+
+  .rule-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .rule-header h3 {
+    font-size: 1rem;
+  }
+
+  .rule-condition,
+  .rule-actions {
+    font-size: 0.85rem;
+  }
+}

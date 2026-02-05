@@ -78,19 +78,31 @@
         </div>
       </div>
 
-      <!-- Geographic Distribution Map -->
+      <!-- Geographic Distribution -->
       <div class="card chart-card large">
         <div class="card-header">
-          <h3>🗺️ Geographic Threat Map</h3>
-          <div class="map-legend">
-            <span class="legend-item"><span class="legend-dot critical"></span>Critical</span>
-            <span class="legend-item"><span class="legend-dot high"></span>High</span>
-            <span class="legend-item"><span class="legend-dot medium"></span>Medium</span>
-            <span class="legend-item"><span class="legend-dot low"></span>Low</span>
-          </div>
+          <h3>🗺️ Geographic Threat Distribution</h3>
+          <router-link to="/threat-map" class="view-all">View Full Map →</router-link>
         </div>
-        <div class="chart-container">
-          <v-chart :option="geoMapOption" autoresize />
+        <div class="geo-overview">
+          <div
+            v-for="location in geoLocations"
+            :key="location.name"
+            class="geo-item"
+            :class="getThreatLevel(location.threats)"
+          >
+            <div class="geo-icon">📍</div>
+            <div class="geo-info">
+              <div class="geo-name">{{ location.name }}</div>
+              <div class="geo-stats">
+                <span class="geo-events">{{ location.events }} events</span>
+                <span class="geo-threats" :class="getThreatLevel(location.threats)">
+                  {{ location.threats }} threats
+                </span>
+              </div>
+            </div>
+            <div class="geo-pulse" v-if="location.threats >= 50"></div>
+          </div>
         </div>
       </div>
 
@@ -380,118 +392,22 @@ const eventTypesOption = computed(() => ({
   ]
 }))
 
-// Geographic Map Data (positioned to roughly match Korea's geography)
-const geoMapOption = computed(() => {
-  const locations = [
-    { name: 'Seoul HQ', x: 50, y: 75, events: 234, threats: 89 },
-    { name: 'Incheon DC', x: 45, y: 72, events: 145, threats: 54 },
-    { name: 'Daejeon R&D', x: 48, y: 60, events: 87, threats: 32 },
-    { name: 'Daegu Branch', x: 55, y: 50, events: 98, threats: 43 },
-    { name: 'Busan Office', x: 60, y: 40, events: 156, threats: 67 },
-    { name: 'Gwangju Office', x: 42, y: 50, events: 76, threats: 28 },
-    { name: 'Ulsan Plant', x: 62, y: 45, events: 65, threats: 25 },
-    { name: 'Suwon Branch', x: 50, y: 72, events: 54, threats: 18 }
-  ]
+// Geographic Locations Data
+const geoLocations = ref([
+  { name: 'Seoul HQ', events: 234, threats: 89 },
+  { name: 'Busan Office', events: 156, threats: 67 },
+  { name: 'Incheon DC', events: 145, threats: 54 },
+  { name: 'Daegu Branch', events: 98, threats: 43 },
+  { name: 'Daejeon R&D', events: 87, threats: 32 },
+  { name: 'Gwangju Office', events: 76, threats: 28 }
+])
 
-  const getThreatColor = (threats) => {
-    if (threats >= 80) return '#ef4444'
-    if (threats >= 50) return '#f59e0b'
-    if (threats >= 20) return '#3b82f6'
-    return '#10b981'
-  }
-
-  return {
-    backgroundColor: '#f0f4f8',
-    tooltip: {
-      trigger: 'item',
-      formatter: (params) => {
-        if (!params.data) return ''
-        const data = params.data
-        return `<div style="padding: 8px;">
-          <div style="font-weight: bold; margin-bottom: 4px;">${data.name}</div>
-          <div>Events: <strong>${data.events}</strong></div>
-          <div>Threats: <strong style="color: ${getThreatColor(data.threats)}">${data.threats}</strong></div>
-        </div>`
-      },
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#e5e7eb',
-      borderWidth: 1,
-      textStyle: { color: '#1f2937' }
-    },
-    xAxis: {
-      type: 'value',
-      show: false
-    },
-    yAxis: {
-      type: 'value',
-      show: false
-    },
-    series: [
-      {
-        type: 'scatter',
-        symbolSize: (data) => {
-          if (!data || !data[2]) return 25
-          return Math.max(data[2] / 3, 25)
-        },
-        data: locations.map(loc => ({
-          name: loc.name,
-          value: [loc.x, loc.y, loc.events],
-          events: loc.events,
-          threats: loc.threats,
-          itemStyle: {
-            color: getThreatColor(loc.threats),
-            shadowBlur: 15,
-            shadowColor: getThreatColor(loc.threats),
-            borderColor: '#fff',
-            borderWidth: 3
-          }
-        })),
-        label: {
-          show: true,
-          formatter: '{b}',
-          position: 'top',
-          fontSize: 11,
-          fontWeight: 'bold',
-          color: '#1f2937',
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          padding: [4, 8],
-          borderRadius: 4
-        },
-        emphasis: {
-          scale: 1.3,
-          label: {
-            show: true,
-            fontSize: 13
-          }
-        }
-      },
-      {
-        type: 'effectScatter',
-        symbolSize: (data) => {
-          if (!data || !data[2]) return 25
-          return Math.max(data[2] / 3, 25)
-        },
-        data: locations.filter(loc => loc.threats >= 50).map(loc => ({
-          name: loc.name,
-          value: [loc.x, loc.y, loc.events],
-          events: loc.events,
-          threats: loc.threats
-        })),
-        showEffectOn: 'render',
-        rippleEffect: {
-          brushType: 'stroke',
-          scale: 3,
-          period: 3
-        },
-        itemStyle: {
-          color: '#ef4444',
-          shadowBlur: 20,
-          shadowColor: 'rgba(239, 68, 68, 0.8)'
-        }
-      }
-    ]
-  }
-})
+const getThreatLevel = (threats) => {
+  if (threats >= 80) return 'critical'
+  if (threats >= 50) return 'high'
+  if (threats >= 20) return 'medium'
+  return 'low'
+}
 
 // Response Time Chart
 const responseTimeOption = computed(() => {
@@ -829,6 +745,120 @@ const viewIncident = (id) => {
   background: #10b981;
 }
 
+.geo-overview {
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.geo-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: #f9fafb;
+  border-radius: 10px;
+  border-left: 4px solid;
+  position: relative;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.geo-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.geo-item.critical {
+  border-left-color: #ef4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+.geo-item.high {
+  border-left-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.geo-item.medium {
+  border-left-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.geo-item.low {
+  border-left-color: #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
+}
+
+.geo-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.geo-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.geo-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.geo-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+}
+
+.geo-events {
+  color: #6b7280;
+}
+
+.geo-threats {
+  font-weight: 600;
+}
+
+.geo-threats.critical {
+  color: #dc2626;
+}
+
+.geo-threats.high {
+  color: #d97706;
+}
+
+.geo-threats.medium {
+  color: #2563eb;
+}
+
+.geo-threats.low {
+  color: #059669;
+}
+
+.geo-pulse {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
 .chart-container {
   padding: 1rem;
   flex: 1;
@@ -952,19 +982,117 @@ const viewIncident = (id) => {
   color: #6b7280;
 }
 
-@media (max-width: 1400px) {
-  .chart-card.large {
-    grid-column: span 2;
+/* Tablet */
+@media (max-width: 1024px) {
+  .dashboard {
+    padding: 1.5rem;
   }
-}
 
-@media (max-width: 968px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .charts-grid {
     grid-template-columns: 1fr;
   }
 
   .chart-card.large {
     grid-column: span 1;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .geo-overview {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 1rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-icon {
+    font-size: 2rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .charts-grid {
+    gap: 1rem;
+  }
+
+  .card-header {
+    padding: 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .card-header h3 {
+    font-size: 1rem;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .time-select {
+    width: 100%;
+  }
+
+  .chart-container {
+    min-height: 250px;
+    padding: 0.5rem;
+  }
+
+  .chart-card.large .chart-container {
+    min-height: 300px;
+  }
+
+  .geo-overview {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .geo-item {
+    padding: 1rem;
+  }
+
+  .timeline-container {
+    padding: 1rem;
+  }
+
+  .timeline-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .timeline-marker {
+    display: none;
+  }
+
+  .map-legend {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .map-legend .legend-item {
+    font-size: 0.8rem;
   }
 }
 

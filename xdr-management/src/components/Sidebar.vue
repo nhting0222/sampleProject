@@ -1,10 +1,20 @@
 <template>
-  <aside class="sidebar">
-    <div class="logo">
-      <h1>🛡️ XDR Platform</h1>
-    </div>
+  <div>
+    <!-- Mobile Menu Button -->
+    <button class="mobile-menu-btn" @click="toggleSidebar" v-if="isMobile">
+      <span class="hamburger"></span>
+    </button>
 
-    <nav class="nav-menu">
+    <!-- Overlay for mobile -->
+    <div class="sidebar-overlay" :class="{ active: isOpen }" @click="closeSidebar" v-if="isMobile"></div>
+
+    <aside class="sidebar" :class="{ open: isOpen }">
+      <div class="logo">
+        <h1>🛡️ XDR Platform</h1>
+        <button class="close-btn" @click="closeSidebar" v-if="isMobile">×</button>
+      </div>
+
+      <nav class="nav-menu" @click="handleNavClick">
       <router-link to="/" class="nav-item">
         <span class="icon">📊</span>
         <span>Dashboard</span>
@@ -46,17 +56,51 @@
         </div>
       </div>
     </div>
-  </aside>
+    </aside>
+  </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useXdrStore } from '../stores/xdr'
 
 const xdrStore = useXdrStore()
 
 const criticalCount = computed(() => xdrStore.criticalEvents.length)
 const activeCount = computed(() => xdrStore.activeIncidents.length)
+
+const isOpen = ref(false)
+const isMobile = ref(false)
+
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768
+  if (!isMobile.value) {
+    isOpen.value = false
+  }
+}
+
+const toggleSidebar = () => {
+  isOpen.value = !isOpen.value
+}
+
+const closeSidebar = () => {
+  isOpen.value = false
+}
+
+const handleNavClick = () => {
+  if (isMobile.value) {
+    closeSidebar()
+  }
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 </script>
 
 <style scoped>
@@ -163,5 +207,120 @@ const activeCount = computed(() => xdrStore.activeIncidents.length)
 .role {
   font-size: 0.75rem;
   color: #a0a8b8;
+}
+
+/* Mobile Menu Button */
+.mobile-menu-btn {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1001;
+  background: #1a1d29;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  display: none;
+}
+
+.hamburger {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: white;
+  position: relative;
+}
+
+.hamburger::before,
+.hamburger::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 2px;
+  background: white;
+  left: 0;
+}
+
+.hamburger::before {
+  top: -8px;
+}
+
+.hamburger::after {
+  bottom: -8px;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.sidebar-overlay.active {
+  opacity: 1;
+}
+
+.close-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 240px;
+  }
+
+  .logo h1 {
+    font-size: 1.2rem;
+  }
+
+  .nav-item {
+    padding: 0.8rem 1.2rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+
+  .logo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .close-btn {
+    display: block;
+  }
 }
 </style>

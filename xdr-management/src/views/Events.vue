@@ -297,4 +297,56 @@ const createIncident = async (event) => {
 .btn-action:hover {
   background: #1d4ed8;
 }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .events {
+    padding: 1.5rem;
+  }
+
+  .filters {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .events {
+    padding: 1rem;
+  }
+
+  .filters {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .filter-group input,
+  .filter-group select {
+    font-size: 14px;
+  }
+
+  .card {
+    overflow-x: auto;
+  }
+
+  .events-table {
+    min-width: 800px;
+  }
+
+  .events-table th,
+  .events-table td {
+    padding: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .severity-badge,
+  .status-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+  }
+
+  .btn-action {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
 </style>

@@ -141,3 +141,36 @@ const viewDetail = (id) => {
   color: #065f46;
 }
 </style>
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .incidents {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .incidents {
+    padding: 1rem;
+  }
+
+  .card {
+    overflow-x: auto;
+  }
+
+  .incidents-table {
+    min-width: 900px;
+  }
+
+  .incidents-table th,
+  .incidents-table td {
+    padding: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .severity-badge,
+  .status-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+  }
+}

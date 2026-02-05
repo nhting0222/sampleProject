@@ -686,13 +686,140 @@ onMounted(() => {
   background: #1d4ed8;
 }
 
-@media (max-width: 968px) {
+/* Tablet */
+@media (max-width: 1024px) {
+  .threat-map {
+    padding: 1.5rem;
+  }
+
   .map-header {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-right {
+    width: 100%;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+
+  .locations-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .threat-map {
+    padding: 1rem;
+  }
+
+  .header-left h1 {
+    font-size: 1.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .filter-group label {
+    font-size: 0.8rem;
+  }
+
+  .filter-select {
+    min-width: auto;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .map-legend-section {
+    padding: 1rem;
+  }
+
+  .legend-title {
+    font-size: 0.9rem;
+  }
+
+  .legend-items {
+    gap: 1rem;
+  }
+
+  .legend-item {
+    gap: 0.5rem;
+  }
+
+  .legend-text {
+    font-size: 0.8rem;
+  }
+
+  .legend-count {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .map-chart {
+    height: 400px;
+    padding: 0.5rem;
   }
 
   .locations-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .location-card {
+    border-radius: 8px;
+  }
+
+  .card-header {
+    padding: 1rem;
+  }
+
+  .location-name {
+    font-size: 1rem;
+  }
+
+  .threat-badge {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .stat-row {
+    padding: 0.6rem 0;
+  }
+
+  .stat-label {
+    font-size: 0.85rem;
+  }
+
+  .stat-number {
+    font-size: 1.3rem;
+  }
+
+  .card-footer {
+    padding: 0.75rem 1rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .last-update {
+    font-size: 0.8rem;
+  }
+
+  .details-btn {
+    width: 100%;
+    padding: 0.6rem 1rem;
   }
 }
 </style>

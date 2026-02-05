@@ -151,3 +151,40 @@ const getRiskClass = (score) => {
   color: #065f46;
 }
 </style>
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .assets {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .assets {
+    padding: 1rem;
+  }
+
+  .card {
+    overflow-x: auto;
+  }
+
+  .assets-table {
+    min-width: 1000px;
+  }
+
+  .assets-table th,
+  .assets-table td {
+    padding: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .status-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+  }
+
+  .risk-score {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+  }
+}
